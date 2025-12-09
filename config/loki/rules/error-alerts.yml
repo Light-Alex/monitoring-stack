@@ -1,0 +1,27 @@
+groups:
+  - name: error-logs
+    rules:
+      - alert: HTTPErrorDetected
+        expr: |
+          rate({filename="/var/log/go-app/app.log"} |= "HTTP request processed with error" [5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: go-app
+        annotations:
+          summary: "检测到HTTP错误日志"
+          description: "在应用日志中发现 'HTTP request processed with error' 错误信息"
+
+      - alert: HighHTTPErrorRate
+        expr: |
+          sum(rate({filename="/var/log/go-app/app.log"} |= "HTTP request processed with error" [5m]))
+          /
+          sum(rate({filename="/var/log/go-app/app.log"} |= "HTTP request processed" [5m]))
+          * 100 > 10
+        for: 2m
+        labels:
+          severity: critical
+          service: go-app
+        annotations:
+          summary: "HTTP错误率过高"
+          description: "HTTP错误率超过10%，当前值为 {{ $value | printf \"%.2f\" }}%"

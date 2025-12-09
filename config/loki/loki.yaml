@@ -1,0 +1,46 @@
+auth_enabled: false # 是否开启认证，默认false; 开启后，需要配置认证信息
+
+server:
+  http_listen_port: 3100 # HTTP监听端口，默认3100; 用于接收日志数据
+  grpc_listen_port: 9095 # gRPC监听端口，默认9095; 用于接收日志数据
+
+# 公共配置
+common:
+  # 环型存储配置
+  ring:
+    kvstore:
+      store: inmemory     # 存储后端，默认inmemory; 用于存储索引和日志数据
+  replication_factor: 1   # 副本因子，默认1; 用于复制索引和日志数据到其他节点
+  path_prefix: /loki      # 路径前缀，默认/loki; 用于区分不同的日志流
+
+# 存储配置
+storage_config:
+  filesystem:
+    directory: /loki/data # 日志数据存储目录，默认/loki/data; 用于存储日志数据
+
+schema_config:
+  configs:
+    - from: 2020-10-24         # 从2020-10-24开始使用tsdb存储
+      store: tsdb              # 使用 Time Series Database (时序数据库) 作为索引存储
+      object_store: filesystem # 使用本地文件系统存储日志数据块
+      schema: v13              # 使用 v13 版本的存储架构
+      index:
+        prefix: index_         # 索引文件的前缀名称
+        period: 24h            # 每24小时创建一个新的索引文件
+
+# 限制配置
+limits_config:
+  reject_old_samples: true           # 启用对过时日志样本的拒绝机制
+  reject_old_samples_max_age: 168h   # 拒绝超过7天的过时日志样本
+
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /loki/rules  # 存放实际的告警规则文件（YAML格式）
+  rule_path: /loki/rules-temp # 将规则文件编译为可执行格式的临时位置
+  ring:
+    kvstore:
+      store: inmemory
+  enable_api: true
+  alertmanager_url: http://alertmanager:9050

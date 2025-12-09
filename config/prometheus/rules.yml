@@ -1,0 +1,56 @@
+groups:
+  # 第一组：应用性能告警规则
+  - name: application_alerts
+    rules:
+      # 规则 1: 高错误率告警
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)
+          /
+          sum(rate(http_requests_total[5m])) by (job)
+          * 100 > 5
+        for: 1m # 条件持续1分钟才触发
+        labels:
+          severity: warning # 告警级别标签，可用于Alertmanager路由
+          service: go-app
+        annotations:
+          summary: "应用 {{ $labels.job }} 错误率过高"
+          description: "{{ $labels.job }} 的HTTP 5xx错误率在过去5分钟已超过5%，当前值为 {{ $value | printf \"%.2f\" }}%。"
+
+      # 规则 2: 高请求延迟告警
+      - alert: HighRequestLatency
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          service: go-app
+        annotations:
+          summary: "应用 {{ $labels.job }} 请求延迟过高"
+          description: "{{ $labels.job }} 的95分位请求延迟在过去5分钟已超过0.5秒，当前值为 {{ $value }} 秒。"
+
+  # 第二组：系统与服务可用性告警规则
+  - name: system_alerts
+    rules:
+      # 规则 3: 实例宕机告警（核心）
+      - alert: InstanceDown
+        expr: up == 0 # 利用Prometheus自动采集的`up`指标
+        for: 30s # 抓取目标失联30秒即告警
+        labels:
+          severity: critical # 严重级别
+          service: go-app
+        annotations:
+          summary: "实例 {{ $labels.instance }} 宕机"
+          description: "监控目标 {{ $labels.job }} ({{ $labels.instance }}) 已失联超过30秒。"
+
+      # 规则 4: 内存使用率告警（Go应用示例）
+      - alert: GoAppHighMemory
+        expr: |
+          process_resident_memory_bytes{job="go-app"} / 1024 / 1024 > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: go-app
+        annotations:
+          summary: "Go应用 {{ $labels.instance }} 内存使用过高"
+          description: "应用内存占用已超过100MB，当前值为 {{ $value | printf \"%.2f\" }} MB。"

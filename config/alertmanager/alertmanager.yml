@@ -1,0 +1,34 @@
+# 全局配置
+global:
+  resolve_timeout: 30s # 告警恢复超时时间，默认5分钟; 告警状态从"触发"变为"恢复"时，等待5分钟确认问题真正解决
+
+# 路由配置
+route:
+  group_by: ['alertname']      # 根据告警名称分组; 相同告警名称的告警会被分组在一起
+  group_wait: 10s              # 新告警组等待时间，默认10秒; 一个新告警分组形成后，第一次发送通知前等待10秒；初始聚合，减少通知风暴，确保首次通知信息更完整
+  
+  # 当group_interval和repeat_interval都配置时，
+  # 若repeat_interval小于group_interval，则repeat_interval会被忽略，使用group_interval作为重复发送间隔
+  # 若repeat_interval大于等于group_interval，则repeat_interval生效，告警内容变化以group_interval为间隔发送通知；告警内容未变化以repeat_interval为间隔发送通知
+  # 告警内容指告警的状态（firing、resolved）、标签（labels）、注解（annotations）
+  # labels:
+  #   alertname: "InstanceDown"      # 告警名称
+  #   severity: "critical"           # 严重级别
+  #   instance: "192.168.1.100:9090" # 实例标识
+  #   job: "prometheus"              # 任务名称
+
+  # annotations:
+  #   summary: "实例 {{ $labels.instance }} 宕机"
+  #   description: "监控目标 {{ $labels.job }} 已失联超过30秒"
+  #   runbook_url: "http://example.com/runbook"
+
+  group_interval: 30s          # 告警组发送间隔，默认10秒; 一个分组已发送过初始通知后，该分组内再次有告警触发时(告警内容变化)，等待10秒再发送告警；后续聚合，控制通知更新频率，避免因同一问题持续产生告警而频繁轰炸
+  repeat_interval: 60s         # 重复发送间隔，默认1小时; 告警状态为"触发"时，重复发送告警（告警内容未变化）的间隔
+  
+  receiver: 'default-receiver' # 默认接收者，可在receivers中配置
+
+receivers:
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://192.168.140.128:5000/'  # 此处仅为示例，实际可替换为邮件、钉钉等
+        send_resolved: true          # 是否发送恢复通知，默认false; 告警状态从"触发"变为"恢复"时，发送恢复通知

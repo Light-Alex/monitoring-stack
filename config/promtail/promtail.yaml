@@ -1,0 +1,20 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+# 全局配置
+positions:
+  filename: /tmp/positions.yaml  # 记录每个被监控日志文件的当前读取位置，确保重启后不丢失采集进度
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+# 采集配置
+scrape_configs:
+  - job_name: go-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: go-app
+          __path__: /var/log/go-app/*.log
